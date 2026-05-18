@@ -321,3 +321,12 @@ docker-compose exec frontend sh
 - ✅ **배포 준비**: Docker 컨테이너화 완료
 - ✅ **코드 품질**: ESLint, Prettier, 타입 체크
 - ✅ **반응형 디자인**: 모바일/데스크톱 모두 지원
+
+## 📝 상태
+
+- **최종 갱신**: 2025-09
+- **Status**: active (재사용 템플릿)
+
+## 📜 라이선스
+
+WDSLab 작업물. 자유롭게 fork/clone하여 새 프로젝트 시작에 사용 가능.
