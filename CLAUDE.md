@@ -120,3 +120,23 @@ docker-compose up -d --build
 
 ### CI/CD
 - 배포 파이프라인·서버 인증(Deploy Key / PAT)·Secrets 설정은 `DEPLOY.md`에 정리돼 있다. 배포 관련 질문/작업은 거기를 먼저 참고한다.
+
+### CI/CD 셋업 체크리스트 (이 리포에 자동배포 붙일 때 따를 순서)
+
+먼저 사용자에게 받을 값: **서버 퍼블릭 IP / SSH 키(경로 또는 .pem 내용) / 인증 방식(Deploy Key 또는 PAT)**.
+(없으면 진행 못 하는 부분이므로 먼저 물어본다. 명령 상세는 `DEPLOY.md`.)
+
+1. **리포 파일 정비** (Claude 단독 가능)
+   - `.github/workflows/deploy.yml` 존재 확인 (없으면 템플릿에서 복사)
+   - `frontend/next.config.js` 에 `output: 'standalone'` 있는지
+   - `frontend/Dockerfile` 이 프로덕션 빌드인지 (`npm run dev` 아님)
+   - 프로덕션 `docker-compose.yml` 에 소스 bind-mount 없는지
+   - 빌드 검증: `cd frontend && npm run build`, `cd backend && python -c "import app.main"`
+2. **GitHub Secrets 등록** — `gh` 로그인돼 있으면 `gh secret set` 으로 직접: `EC2_HOST` / `EC2_USER`(ubuntu) / `EC2_SSH_KEY`(개인키 전체)
+3. **서버 인증** (사용자가 서버에서 실행하거나, 권한 주면 Claude가 SSH로)
+   - Deploy Key: 서버에서 키 생성 → 공개키를 GitHub deploy key로 등록(`gh repo deploy-key add` 또는 UI, 읽기전용) → remote를 SSH로 변경
+   - 또는 PAT: `git remote set-url origin https://x-access-token:<PAT>@github.com/<owner>/<repo>.git`
+4. **서버 최초 준비**: Docker 설치 → `~/<repo>` 로 clone → `.env` 채우기 → `docker compose up -d --build` 1회
+5. **확인**: push(또는 Actions 수동 실행) → build → deploy 초록불
+
+> 주의: 2·3·4 는 서버 IP/키/서버 접근이 있어야 하는 외부 작업이라 "리포만 보고 100% 자동"은 안 된다. 1번(리포 파일)까지는 자동으로 끝내고, 나머지는 사용자 입력을 받아 진행한다.
