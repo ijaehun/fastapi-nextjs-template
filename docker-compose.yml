@@ -12,11 +12,12 @@ services:
       - "8000:8000"
     environment:
       - APP_NAME=My Web Template
-      - DEBUG=True
-      - ENVIRONMENT=development
-      - DATABASE_URL=sqlite:///./app.db
+      - DEBUG=False
+      - ENVIRONMENT=production
+      - DATABASE_URL=sqlite:///./data/app.db
+    # NOTE: 프로덕션에서는 소스 bind-mount 하지 않음 (이미지에 빌드된 코드를 사용).
+    #       핫리로드용 소스 마운트는 docker-compose.dev.yml 에 있음.
     volumes:
-      - ./backend:/app
       - backend_data:/app/data
     networks:
       - app-network
@@ -38,11 +39,11 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-      - /app/.next
+      # 프로덕션은 nginx 뒤에서 상대경로(/api)로 호출하므로 보통 비워둔다.
+      # nginx 없이 직접 노출하는 경우에만 실제 백엔드 공개 URL을 지정.
+      - NEXT_PUBLIC_API_URL=
+    # NOTE: standalone 빌드 결과(node server.js)를 쓰므로 소스 bind-mount 하지 않음.
+    #       핫리로드용 소스 마운트는 docker-compose.dev.yml 에 있음.
     networks:
       - app-network
     depends_on:

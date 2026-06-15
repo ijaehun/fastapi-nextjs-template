@@ -94,12 +94,29 @@ docker-compose up -d --build
 - Frontend: `NEXT_PUBLIC_*` prefix for client-exposed vars, accessed via `config/env.ts`
 
 ### Production deployment
-- `scripts/deploy.sh` for AWS EC2 deployment
-- Nginx routes `/api/*` → backend, `/ws/*` → backend WebSocket, rest → frontend
-- Use `docker-compose.yml` (production), not `.dev.yml`
+- **자동 배포**: `.github/workflows/deploy.yml` — main push 시 빌드 검사 후 서버에 SSH로 배포. 셋업은 `DEPLOY.md` 참고.
+- **수동 배포**: `scripts/deploy.sh` (tar+scp) 또는 서버에서 `git pull && docker compose up -d --build`
+- 프로덕션은 `docker-compose.yml` 사용 (`.dev.yml` 아님). 프론트는 **standalone 빌드**(`output: 'standalone'` + `node server.js`)로 실행됨 — 절대 `npm run dev`로 운영하지 말 것
+- Nginx routes `/api/*` → backend, rest → frontend
 
 ## Notes for Claude Code
 
-- Don't commit secrets — `.env*` files (except `.env.example`) are gitignored
+이 리포는 `fastapi-nextjs-template` 기반이다. 작업 시 아래 가이드라인을 따른다.
+
+### 일반
+- Don't commit secrets — `.env*` files (except `.env.example`) are gitignored. `.db` 파일, 빌드 산출물(`.next/`, `node_modules/`)도 커밋 금지.
 - When adding a new feature: create both backend route handler (`app/api/<feature>.py`) and frontend service (`services/<feature>Service.ts`)
 - Path aliases configured in `tsconfig.json`: `@/*` → `src/*`
+
+### 배포가 깨지지 않게 (중요)
+- **프론트 `next.config.js`의 `output: 'standalone'`을 절대 지우지 말 것** — 프로덕션 Dockerfile(`node server.js`)이 이걸 전제로 동작한다. 지우면 도커 빌드가 깨진다.
+- **프로덕션 `docker-compose.yml`에 소스 bind-mount(`./frontend:/app` 등)를 추가하지 말 것** — standalone 실행을 덮어써서 망가진다. 핫리로드 마운트는 `docker-compose.dev.yml` 에만.
+- 프론트 Dockerfile을 `npm run dev`로 바꾸지 말 것 (운영을 개발 모드로 돌리는 것). 빌드 타입 에러가 나면 dev로 우회하지 말고 **타입 에러 자체를 고친다**.
+- `NEXT_PUBLIC_*`는 **빌드 시점에 박힌다**. 프로덕션은 nginx 뒤 상대경로(`/api`)를 쓰므로 `NEXT_PUBLIC_API_URL`은 보통 비워둔다.
+
+### 변경 후 셀프 체크
+- 배포에 영향 가는 변경(프론트 코드/타입/Dockerfile/compose)을 했으면, push 전에 로컬에서 `cd frontend && npm run build`가 통과하는지 확인한다 (CI 빌드 게이트와 동일한 검사).
+- 백엔드 변경 시 `cd backend && python -c "import app.main"`로 import가 깨지지 않는지 확인.
+
+### CI/CD
+- 배포 파이프라인·서버 인증(Deploy Key / PAT)·Secrets 설정은 `DEPLOY.md`에 정리돼 있다. 배포 관련 질문/작업은 거기를 먼저 참고한다.
